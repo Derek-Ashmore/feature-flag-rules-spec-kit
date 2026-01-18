@@ -25,3 +25,11 @@ npx claude-flow init --force # To initialize this project
 ```bash
 npx claude-flow swarm "" --claude
 ```
+
+## Establish Git Spec Constitution
+
+Within Claude, execute
+
+```
+/speckit.constitution
+```
