@@ -33,3 +33,5 @@ Within Claude, execute
 ```
 /speckit.constitution
 ```
+
+Claude will issue several prompts for more details.
