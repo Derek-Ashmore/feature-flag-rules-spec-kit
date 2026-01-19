@@ -83,6 +83,16 @@ As a developer, I want to define feature flag rules in YAML format so that I can
 - What happens when the allowlist or blocklist is empty? Engine ignores empty lists and evaluates other conditions normally
 - What happens when no rules file is loaded before evaluation? Engine returns an error indicating no rules are configured
 
+## Clarifications
+
+### Session 2026-01-19
+
+- Q: Can rules target multiple regions or only a single region per condition? → A: Multiple regions per rule condition (e.g., `region: ["US", "CA", "MX"]`)
+- Q: Should plan-based targeting support multiple plans per rule condition? → A: Multiple plans per rule condition (e.g., `plans: ["pro", "enterprise"]`)
+- Q: When a rule omits a condition (plans/regions), how should the engine interpret it? → A: Omitted condition means "match any" (permissive)
+- Q: Should rules have an explicit enabled toggle or is presence sufficient? → A: Rules have `enabled: true/false` toggle; disabled rules always return `false`
+- Q: What is the target runtime/language for this library? → A: TypeScript (Node.js)
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
@@ -90,8 +100,8 @@ As a developer, I want to define feature flag rules in YAML format so that I can
 - **FR-001**: System MUST evaluate feature flags and return boolean values (`true` for enabled, `false` for disabled)
 - **FR-002**: System MUST support user context containing three fields: userId (string), plan (free/pro/enterprise), and region (ISO country code string)
 - **FR-003**: System MUST load and parse rule definitions from YAML format
-- **FR-004**: System MUST support plan-based targeting where a rule specifies which plans have access (free, pro, enterprise)
-- **FR-005**: System MUST support region-based targeting where a rule specifies which regions have access using ISO country codes
+- **FR-004**: System MUST support plan-based targeting where a rule specifies one or more plans (as an array) that have access (free, pro, enterprise); user matches if their plan is in the array
+- **FR-005**: System MUST support region-based targeting where a rule specifies one or more regions (as an array) that have access using ISO country codes; user matches if their region is in the array
 - **FR-006**: System MUST apply AND logic when multiple conditions are specified (all conditions must match for `true`)
 - **FR-007**: System MUST support allowlist targeting where specific user IDs are granted access regardless of other conditions
 - **FR-008**: System MUST support blocklist targeting where specific user IDs are denied access regardless of other conditions
@@ -101,10 +111,13 @@ As a developer, I want to define feature flag rules in YAML format so that I can
 - **FR-012**: System MUST provide clear error messages for missing required fields in rule definitions
 - **FR-013**: System MUST provide clear error messages when user context is missing required fields during evaluation
 - **FR-014**: System MUST validate plan values in rules against the allowed set (free, pro, enterprise) during loading
+- **FR-015**: System MUST treat omitted conditions (plans or regions not specified in a rule) as "match any", allowing the rule to pass that condition for all users
+- **FR-016**: System MUST support an `enabled` boolean field on each rule; rules with `enabled: false` MUST return `false` without evaluating other conditions
+- **FR-017**: System MUST require the `enabled` field on each rule (no implicit default)
 
 ### Key Entities
 
-- **Feature Flag Rule**: Represents a single feature flag configuration including its name, targeting conditions (plan, region), and user lists (allowlist, blocklist)
+- **Feature Flag Rule**: Represents a single feature flag configuration including its name, enabled toggle, targeting conditions (plans array, regions array), and user lists (allowlist, blocklist)
 - **User Context**: Represents the current user being evaluated, containing userId (unique identifier), plan (subscription tier), and region (geographic location as ISO country code)
 - **Rules Configuration**: The complete set of feature flag rules loaded from YAML, indexed by feature flag name for lookup during evaluation
 
@@ -121,6 +134,7 @@ As a developer, I want to define feature flag rules in YAML format so that I can
 
 ## Assumptions
 
+- The library is implemented in TypeScript targeting Node.js runtime
 - Region values in user context are provided as valid ISO 3166-1 alpha-2 country codes by the caller (e.g., "US", "CA", "GB"); the engine does not validate region code format
 - User IDs are case-sensitive strings; "User-123" and "user-123" are treated as different users
 - The engine operates synchronously; rule loading and evaluation are blocking operations

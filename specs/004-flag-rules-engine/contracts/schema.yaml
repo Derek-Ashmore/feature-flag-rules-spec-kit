@@ -1,0 +1,144 @@
+# Feature Flag Rules Engine - YAML Schema Contract
+#
+# This file documents the expected YAML structure for rule definitions.
+# Implementation MUST accept YAML conforming to this schema.
+#
+# Feature: 004-flag-rules-engine
+# Date: 2026-01-19
+
+# =============================================================================
+# Schema Definition (JSON Schema draft-07 compatible)
+# =============================================================================
+
+$schema: "http://json-schema.org/draft-07/schema#"
+title: "Feature Flag Rules Configuration"
+description: "YAML schema for feature flag rule definitions"
+
+type: object
+required:
+  - flags
+additionalProperties: false
+
+properties:
+  flags:
+    type: object
+    description: "Map of feature flag names to their rule configurations"
+    additionalProperties:
+      $ref: "#/definitions/FeatureFlagRule"
+
+definitions:
+  Plan:
+    type: string
+    enum:
+      - free
+      - pro
+      - enterprise
+    description: "Valid subscription plan values (case-insensitive on input)"
+
+  FeatureFlagRule:
+    type: object
+    required:
+      - enabled
+    additionalProperties: false
+    properties:
+      enabled:
+        type: boolean
+        description: "Master toggle. If false, flag returns false for all users."
+
+      plans:
+        type: array
+        description: "Plans with access. Omit = any plan matches."
+        items:
+          $ref: "#/definitions/Plan"
+        uniqueItems: true
+
+      regions:
+        type: array
+        description: "Regions with access (ISO 3166-1 alpha-2). Omit = any region."
+        items:
+          type: string
+          minLength: 1
+        uniqueItems: true
+
+      allowlist:
+        type: array
+        description: "User IDs always granted access (bypasses plan/region)."
+        items:
+          type: string
+          minLength: 1
+        uniqueItems: true
+
+      blocklist:
+        type: array
+        description: "User IDs always denied access (highest precedence)."
+        items:
+          type: string
+          minLength: 1
+        uniqueItems: true
+
+# =============================================================================
+# Example: Valid Configuration
+# =============================================================================
+#
+# flags:
+#   # Full configuration example
+#   dark-mode:
+#     enabled: true
+#     plans:
+#       - pro
+#       - enterprise
+#     regions:
+#       - US
+#       - CA
+#       - GB
+#     allowlist:
+#       - user-beta-001
+#       - user-vip-042
+#     blocklist:
+#       - user-banned-123
+#
+#   # Minimal configuration (only required field)
+#   maintenance-mode:
+#     enabled: false
+#
+#   # Plans only (any region)
+#   premium-feature:
+#     enabled: true
+#     plans:
+#       - enterprise
+#
+#   # Regions only (any plan)
+#   eu-compliance:
+#     enabled: true
+#     regions:
+#       - DE
+#       - FR
+#       - IT
+#       - ES
+#
+#   # Allowlist only (beta testing)
+#   experimental-ui:
+#     enabled: true
+#     allowlist:
+#       - user-tester-001
+#       - user-tester-002
+
+# =============================================================================
+# Example: Invalid Configurations
+# =============================================================================
+#
+# # ERROR: Missing required 'enabled' field
+# flags:
+#   bad-flag:
+#     plans: [pro]
+#
+# # ERROR: Invalid plan value
+# flags:
+#   bad-plan:
+#     enabled: true
+#     plans: [premium]  # 'premium' not in [free, pro, enterprise]
+#
+# # ERROR: enabled must be boolean
+# flags:
+#   bad-enabled:
+#     enabled: "yes"  # Must be true or false
